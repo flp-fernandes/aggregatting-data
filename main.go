@@ -16,27 +16,18 @@ func main() {
 
 	userId := getUserId()
 
-	qtyOfGoroutines := 2
-	responseChannel := make(chan Response, qtyOfGoroutines)
+	balanceChannel := make(chan int, 1)
+	nameChannel := make(chan string, 1)
+
 	wg := &sync.WaitGroup{}
-	wg.Add(qtyOfGoroutines)
+	wg.Add(2)
 
-	go getUserBalance(userId, responseChannel, wg)
-	go getUserName(userId, responseChannel, wg)
+	go getUserBalance(userId, balanceChannel, wg)
+	go getUserName(userId, nameChannel, wg)
 	wg.Wait()
-	close(responseChannel)
 
-	var balance int
-	var name string
-
-	for response := range responseChannel {
-		switch response.Type {
-		case "balance":
-			balance = response.Value.(int)
-		case "name":
-			name = response.Value.(string)
-		}
-	}
+	balance := <-balanceChannel
+	name := <-nameChannel
 
 	fmt.Printf("Saldo: %d, Nome: %s\n", balance, name)
 
@@ -50,18 +41,20 @@ func getUserId() string {
 	return "f93581ea-8e76-4d7e-8432-d016e397bb21"
 }
 
-func getUserBalance(_ string, responseChannel chan Response, wg *sync.WaitGroup) {
+func getUserBalance(_ string, balanceChannel chan int, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer close(balanceChannel)
 
 	time.Sleep(time.Millisecond * 100)
 
-	responseChannel <- Response{Type: "balance", Value: 400}
+	balanceChannel <- 400
 }
 
-func getUserName(_ string, responseChannel chan Response, wg *sync.WaitGroup) {
+func getUserName(_ string, nameChannel chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer close(nameChannel)
 
 	time.Sleep(time.Millisecond * 150)
 
-	responseChannel <- Response{Type: "name", Value: "Felipão"}
+	nameChannel <- "Felipão"
 }
